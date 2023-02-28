@@ -9,10 +9,10 @@ const AboutText: React.FC = () => {
         fontWeight='700'
         letterSpacing={3}
       >
-        EYRO.
+        SHAREIT.
       </Typography>
       <Typography variant='subtitle1'>
-        Eyro is social media platform for sharing your thoughts and ideas.
+        Shareit is social media platform for sharing your thoughts and ideas.
       </Typography>
       <Typography variant='subtitle1'>
         Get in touch with people who share your interests and passions.

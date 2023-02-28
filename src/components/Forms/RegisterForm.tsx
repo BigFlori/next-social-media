@@ -1,21 +1,24 @@
 import { Box, Button, Divider, Paper, Radio, TextField } from "@mui/material";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import Moment from "moment";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import FormControl from "@mui/material/FormControl";
 import FormLabel from "@mui/material/FormLabel";
 import RadioGroup from "@mui/material/RadioGroup";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/firebase/firebase";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, updateDoc } from "firebase/firestore";
+import { auth, db } from "@/firebase/firebase";
 
 const RegisterForm: React.FC = () => {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
+  const firstNameRef = useRef<HTMLInputElement>(null);
+  const lastNameRef = useRef<HTMLInputElement>(null);
+  const [gender, setGender] = useState("female");
   const [selectedDate, setSelectedDate] = useState<Moment.Moment | null>(null);
 
   const handleDateChange = (date: Moment.Moment | null) => {
@@ -24,17 +27,35 @@ const RegisterForm: React.FC = () => {
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    createUserWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        //Signed up
-        const user = userCredential.user;
-        console.log(user);
-      })
-      .catch((error) => {
-        const errorCode = error.code;
-        const errorMessage = error.message;
-        console.log(errorCode, errorMessage);
-      });
+    // console.log(
+    //   email,
+    //   password,
+    //   firstNameRef.current?.value,
+    //   lastNameRef.current?.value,
+    //   gender,
+    //   selectedDate?.format("YYYY-MM-DD")
+    // );
+
+      createUserWithEmailAndPassword(auth, email, password)
+        .then(async (userCredential) => {
+          //Signed up
+          const user = userCredential.user;
+          await updateProfile(user, {
+            displayName: `${firstNameRef.current?.value} ${lastNameRef.current?.value}`,
+          });
+
+          await updateDoc(doc(db, "users", user.uid), {
+            firstName: firstNameRef.current?.value,
+            lastName: lastNameRef.current?.value,
+            gender: gender,
+            dateOfBirth: selectedDate?.format("DD-MM-YYYY"),
+          });
+        })
+        .catch((error) => {
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          console.log(errorCode, errorMessage);
+        });
   };
 
   const handleBack = () => {
@@ -55,6 +76,8 @@ const RegisterForm: React.FC = () => {
         component='form'
         sx={{ display: "flex", flexDirection: "column", gap: 2 }}
         onSubmit={handleSubmit}
+        noValidate
+        autoComplete='off'
       >
         <Box sx={{ display: "flex", gap: 2 }}>
           <TextField
@@ -63,6 +86,7 @@ const RegisterForm: React.FC = () => {
             variant='outlined'
             fullWidth
             required
+            inputRef={firstNameRef}
           />
           <TextField
             label='Last name'
@@ -70,6 +94,7 @@ const RegisterForm: React.FC = () => {
             variant='outlined'
             fullWidth
             required
+            inputRef={lastNameRef}
           />
         </Box>
         <TextField
@@ -96,12 +121,13 @@ const RegisterForm: React.FC = () => {
           onChange={handleDateChange}
           renderInput={(params) => <TextField {...params} required />}
         />
-        <FormControl>
+        <FormControl component='fieldset' required>
           <FormLabel id='gender-group-label'>Gender</FormLabel>
           <RadioGroup
             name='gender-radio-group'
-            defaultValue='female'
             sx={{ flexDirection: "row" }}
+            value={gender}
+            onChange={(event) => setGender(event.target.value)}
           >
             <FormControlLabel
               value='female'
